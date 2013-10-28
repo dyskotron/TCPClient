@@ -1,0 +1,131 @@
+
+namespace SocketEnums
+{
+	enum OUTPACKET_RESULT
+	{
+		OUTPACKET_RESULT_SUCCESS			= 1,
+		OUTPACKET_RESULT_NO_ROOM_IN_BUFFER	= 2,
+		OUTPACKET_RESULT_NOT_CONNECTED		= 3,
+		OUTPACKET_RESULT_SOCKET_ERROR		= 4
+	};
+	enum AuthPacketOpcodes
+	{
+		C_MSG_AUTH_CHALLENGE			= 0,
+		S_MSG_AUTH_CHALLENGE			= 1,
+		C_MSG_AUTH_SERVER_LIST			= 2,
+		S_MSG_AUTH_SERVER_LIST			= 3,
+		C_MSG_AUTH_RECHALLENGE			= 4,
+		S_MSG_AUTH_RECHALLENGE			= 5,
+		C_MSG_AUTH_GET_SERVER_STATS		= 6,		//for monitoring tool
+		S_MSG_AUTH_GET_SERVER_STATS		= 7,		//for monitoring tool
+		AUTH_NUM
+	};
+	enum InterComOpcodes
+	{
+		C_MSG_INT_REGISTER_GAME_SERVER			= 0,
+		S_MSG_INT_REGISTER_GAME_SERVER			= 1,
+		C_MSG_INT_PING							= 2,
+		S_MSG_INT_PONG							= 3,
+		C_MSG_INT_FORWARD_PACKET				= 4,
+		S_MSG_INT_FORWARD_PACKET				= 5,
+		C_MSG_INT_GAME_SERVER_DISCONNECTED		= 6,
+		S_MSG_INT_GAME_SERVER_DISCONNECTED		= 7,
+		C_MSG_INT_UPDATE_PLAYERS				= 8,
+		S_MSG_INT_UPDATE_PLAYERS				= 9,
+		C_MSG_INT_UPDATE_QUEUE					= 10,
+		S_MSG_INT_UPDATE_QUEUE					= 11,
+		INT_NUM
+	};
+	enum ClientOpcodes
+	{
+		C_MSG_LOGON_PLAYER						= 0,
+		S_MSG_LOGON_PLAYER						= 1,
+		C_MSG_MATCH_GAME						= 2,
+		S_MSG_MATCH_GAME						= 3,
+		C_MSG_SAVE_CUSTOM_DATA					= 4,
+		S_MSG_SAVE_CUSTOM_DATA					= 5,
+		C_MSG_GET_CUSTOM_DATA					= 6,
+		S_MSG_GET_CUSTOM_DATA					= 7,
+		C_MSG_SEND_DATA_TO_CLIENT				= 8,
+		S_MSG_SEND_DATA_TO_CLIENT				= 9,
+		C_MSG_PONG								= 10,
+		S_MSG_PING								= 11,
+		C_MSG_UNMATCH_GAME						= 12,
+		S_MSG_UNMATCH_GAME						= 13,
+		C_MSG_GET_ALL_CACHED_DATA				= 14,
+		S_MSG_GET_ALL_CACHED_DATA				= 15,
+		C_MSG_GET_SERVER_STATS					= 16,		//for monitoring tool
+		S_MSG_GET_SERVER_STATS					= 17,		//for monitoring tool
+		OPCODES_NUM
+	};
+
+    enum ClientDataOpcodes
+	{
+		C_MSG_CLIENT_DATA_TURN_START            = 0,
+		C_MSG_CLIENT_DATA_TURN_TIMEOUT          = 1,
+        C_MSG_CLIENT_DATA_TURN                  = 2,
+
+		CLIENT_DATA_OPCODES_NUM
+	};
+
+	enum TransDBOpcodes
+	{
+		OP_TDB_NULL								= 0,
+
+        C_MSG_TDB_WRITE_DATA                    = 1,
+        S_MSG_TDB_WRITE_DATA                    = 2,
+
+        C_MSG_TDB_READ_DATA                     = 3,
+        S_MSG_TDB_READ_DATA                     = 4,
+
+		C_MSG_TDB_DELETE_DATA   				= 5,
+		S_MSG_TDB_DELETE_DATA                   = 6,
+
+        C_MSG_TDB_GET_ALL_X                     = 7,
+        S_MSG_TDB_GET_ALL_X                     = 8,
+
+        C_MSG_TDB_PONG                          = 9,
+        S_MSG_TDB_PING                          = 10,
+
+        C_MSG_TDB_GET_ALL_Y                     = 11,
+        S_MSG_TDB_GET_ALL_Y                     = 12,
+
+		C_MSG_TDB_STATUS						= 13,
+		S_MSG_TDB_STATUS						= 14,
+
+        C_MSG_TDB_GET_ACTIVITY_ID               = 15,
+        S_MSG_TDB_GET_ACTIVITY_ID               = 16,
+
+        C_MSG_TDB_DELETE_X                      = 17,
+        S_MSG_TDB_DELETE_X                      = 18,
+
+        C_MSG_TDB_DEFRAMENT_DATA                = 19,
+        S_MSG_TDB_DEFRAMENT_DATA                = 20,
+
+		OP_TDB_NUM
+	};
+	enum GameServerTypes
+	{
+		E_NULL_TYPE								= 0,
+        E_TIC_TAC_TOE                           = 1,
+		E_REGION_USA							= 100,
+		E_REGION_EU								= 200,
+		E_REGION_AUSTRALIA						= 300,
+		E_REGION_CHINA							= 400,
+		E_REGION_INDONESIA						= 500,
+		E_REGION_LATIN_AMERICA					= 600
+	};
+	enum UnMatchReason
+	{
+		E_OK 									= 0,
+		E_ERROR 								= 1,
+		E_USER_REQUEST 							= 2,
+		E_QUEUE_TIMEOUT 						= 3
+	};
+
+    enum PlayerStorageKeys
+    {
+        E_PLAYER_PROFILE                        = 1,
+        E_PLAYER_ELO                            = 2,
+    };
+}
