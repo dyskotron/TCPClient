@@ -1,4 +1,4 @@
-package server.packets
+package server.packets.enumAlts
 {
     public class GameServerTypes
     {

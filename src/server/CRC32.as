@@ -39,6 +39,9 @@ package server
         /** The fast CRC table. Computed once when the CRC32 class is loaded. */
         private static var crcTable: Array = makeCrcTable();
 
+        private static const CRC_POLY: uint = 0x82f63b78;
+        private static const CRC_INIT: uint = 0xffffffff;
+
         /** Make the table for a fast CRC. */
         private static function makeCrcTable(): Array
         {
@@ -48,7 +51,7 @@ package server
                 var c: uint = n;
                 for (var k: int = 8; --k >= 0;)
                 {
-                    if ((c & 1) != 0) c = 0xedb88320 ^ (c >>> 1);
+                    if ((c & 1) != 0) c = CRC_POLY ^ (c >>> 1);
                     else c = c >>> 1;
                 }
                 crcTable[n] = c;
@@ -61,7 +64,7 @@ package server
          */
         public function getValue(): uint
         {
-            return crc & 0xffffffff;
+            return crc & CRC_INIT;
         }
 
         /**
@@ -82,10 +85,16 @@ package server
             var off: uint = 0;
             var len: uint = buf.length;
             var c: uint = ~crc;
-            while (--len >= 0) c = crcTable[(c ^ buf[off++]) & 0xff] ^ (c >>> 8);
+            while (--len >= 0)
+                c = crcTable[(c ^ buf[off++]) & 0xff] ^ (c >>> 8);
             crc = ~c;
         }
 
+        /**
+         * reset previous CRC and computes new CRC from provided bytearray
+         * @param buf
+         * @return
+         */
         public function computeCRC32(buf: ByteArray): uint
         {
             reset();

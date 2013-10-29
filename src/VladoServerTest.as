@@ -17,7 +17,6 @@ package
 
         private var tcpManager: TCPCommManager;
 
-
         private static const CRYPT_KEY: String = 'T2%o9^24C2r14}:p63zU';
 
 
@@ -34,6 +33,11 @@ package
             graphics.beginFill(0x004488);
             graphics.drawRect(0, 0, stage.stageWidth, stage.stageHeight);
             addEventListener(MouseEvent.CLICK, mouseClickListener);
+
+            /*
+             var crcBA:ByteArray = new ByteArray();
+             crcBA.endian = Endian.LITTLE_ENDIAN;
+             crcBA.writeUnsignedInt();   */
 
         }
 

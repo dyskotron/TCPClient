@@ -1,11 +1,12 @@
 package server.packets.loginServer
 {
     import flash.utils.ByteArray;
+    import flash.utils.Endian;
 
     import server.CRC32;
     import server.auth.Crypt;
-    import server.packets.AuthPacketOpcodes;
     import server.packets.PacketBasic;
+    import server.packets.enumAlts.AuthPacketOpcodes;
 
     public class PacketLS_GetServerList extends PacketBasic
     {
@@ -18,11 +19,9 @@ package server.packets.loginServer
 
         public function PacketLS_GetServerList(serverType: uint)
         {
-            super();
+            super(AuthPacketOpcodes.C_MSG_AUTH_SERVER_LIST);
 
             this.serverType = serverType;
-
-            _type = AuthPacketOpcodes.C_MSG_AUTH_SERVER_LIST;
         }
 
         override public function deserialize(): void
@@ -36,6 +35,7 @@ package server.packets.loginServer
         override public function serialize(crypt: Crypt, crc: CRC32): void
         {
             var internalBuffer: ByteArray = new ByteArray();
+            internalBuffer.endian = Endian.LITTLE_ENDIAN;
             internalBuffer.writeUnsignedInt(serverType);
 
             serializeHeader(crypt, internalBuffer.length, crc.computeCRC32(internalBuffer));

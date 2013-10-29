@@ -1,24 +1,28 @@
 package server.packets.loginServer
 {
-    import server.packets.AuthPacketOpcodes;
     import server.packets.PacketBasic;
+    import server.packets.enumAlts.AuthPacketOpcodes;
 
     public class PacketLS_GetVersion extends PacketBasic
     {
         //uint32
-        private var version: uint;
+        private var _version: uint;
 
         public function PacketLS_GetVersion()
         {
-            super();
-            _type = AuthPacketOpcodes.C_MSG_AUTH_CHALLENGE;
+            super(AuthPacketOpcodes.C_MSG_AUTH_CHALLENGE);
+        }
+
+        public function get version(): uint
+        {
+            return _version;
         }
 
         override public function deserialize(): void
         {
             super.deserialize();
 
-            version = buffer.readUnsignedInt();
+            _version = buffer.readUnsignedInt();
         }
     }
 }

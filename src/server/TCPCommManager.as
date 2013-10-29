@@ -11,8 +11,9 @@ package server
     import flash.utils.Timer;
 
     import server.auth.Crypt;
-    import server.packets.GameServerTypes;
     import server.packets.PacketBasic;
+    import server.packets.enumAlts.AuthPacketOpcodes;
+    import server.packets.enumAlts.GameServerTypes;
     import server.packets.loginServer.PacketLS_GetServerList;
     import server.packets.loginServer.PacketLS_GetVersion;
 
@@ -23,11 +24,15 @@ package server
 
         private var crc32: CRC32;
         private var crypt: Crypt;
+        private var incomingBA: ByteArray;
 
         public function TCPCommManager()
         {
             crc32 = new CRC32();
             crypt = new Crypt();
+
+            incomingBA = new ByteArray();
+            incomingBA.endian = Endian.LITTLE_ENDIAN;
         }
 
         public function connectWithIPAddress(ip: uint, port: uint): void
@@ -79,8 +84,6 @@ package server
             });
 
             timer.start();
-
-
         }
 
         /**
@@ -135,25 +138,73 @@ package server
          */
         private function socketDataHandler(event: ProgressEvent): void
         {
-            trace("_MO_", this, 'SOCKET DATA - length', socket.bytesAvailable);
+            trace("_MO_", this, '=======> INCOMING SOCKET DATA - length', socket.bytesAvailable);
 
-            var ba: ByteArray = new ByteArray();
+            incomingBA.clear();
+            socket.readBytes(incomingBA);
+            crypt.decryptRecv(incomingBA, PacketBasic.PACKET_HEADER_SIZE);
+            incomingBA.position = 0;
 
-            while (socket.bytesAvailable)
-                ba.writeByte(socket.readByte());
+            var dataSize: uint = incomingBA.readUnsignedShort();
+            var packetType: uint = incomingBA.readUnsignedShort();
+            var crc: uint = incomingBA.readUnsignedInt();
 
-            crypt.decryptRecv(ba, PacketBasic.PACKET_HEADER_SIZE);
-            ba.position = 0;
-            ba.endian = Endian.LITTLE_ENDIAN;
+            trace("_MO_", this, 'PACKET TYPE:', packetType, 'DATA SIZE:', dataSize, 'CRC:', crc.toString(16));
 
-            trace("_MO_", this, 'DATA SIZE:', ba.readUnsignedShort());
-            trace("_MO_", this, 'PACKET TYPE:', ba.readUnsignedShort());
-            trace("_MO_", this, 'CRC:', ba.readUnsignedInt());
+            //============================= HOVNA =================================//
 
-            trace("_MO_", this, '====================== unsigned bytes:');
-            ba.position = PacketBasic.PACKET_HEADER_SIZE;
-            while (ba.bytesAvailable)
-                trace("_MO_", this, 'pos:', ba.position, 'val:', ba.readUnsignedByte().toString(2));
+            var packetData: ByteArray = new ByteArray();
+            packetData.endian = Endian.LITTLE_ENDIAN;
+            packetData.writeUnsignedInt(0x00000064);
+            trace("_MO_", this, 'crc test', crc32.computeCRC32(packetData).toString(16));
+
+            trace("_MO_", this, crc.toString(2));
+            trace("_MO_", this, crc32.computeCRC32(packetData).toString(2));
+
+
+            var packetData: ByteArray = new ByteArray();
+            packetData.endian = Endian.LITTLE_ENDIAN;
+            packetData.writeBytes(incomingBA, PacketBasic.PACKET_HEADER_SIZE);
+            packetData.position = 0;
+
+            trace("_MO_", this, 'CRC TEST - data', packetData.readUnsignedInt().toString(16), 'crc', crc32.computeCRC32(packetData).toString(16));
+
+            packetData.position = 0;
+            while (packetData.bytesAvailable)
+                trace("_MO_", this, 'pos:', packetData.position, 'val:', packetData.readUnsignedByte().toString(16));
+
+
+            /**
+             trace("_MO_", this, '====================== unsigned bytes:');
+             incomingBA.position = PacketBasic.PACKET_HEADER_SIZE;
+             while (incomingBA.bytesAvailable)
+             trace("_MO_", this, 'pos:', incomingBA.position, 'val:', incomingBA.readUnsignedByte().toString());
+             */
+
+            //============================= KONEC HOVEN =================================//
+
+
+            var packet: PacketBasic;
+
+            switch (packetType)
+            {
+                case AuthPacketOpcodes.S_MSG_AUTH_CHALLENGE:
+                    packet = new PacketLS_GetVersion();
+                    packet.buffer.writeBytes(incomingBA);
+                    packet.deserialize();
+                    trace("_MO_", this, 'packet recieved S_MSG_AUTH_CHALLENGE', 'version:', PacketLS_GetVersion(packet).version, 'type:', packet.type);
+                    break;
+                case AuthPacketOpcodes.S_MSG_AUTH_RECHALLENGE:
+                    trace("_MO_", this, 'packet recieved S_MSG_AUTH_SERVER_LIST');
+                    break;
+                case AuthPacketOpcodes.S_MSG_AUTH_SERVER_LIST:
+                    trace("_MO_", this, 'packet recieved S_MSG_AUTH_SERVER_LIST');
+                    break;
+                case AuthPacketOpcodes.S_MSG_AUTH_GET_SERVER_STATS:
+                    trace("_MO_", this, 'packet recieved S_MSG_AUTH_GET_SERVER_STATS');
+                    break;
+            }
+
 
         }
     }

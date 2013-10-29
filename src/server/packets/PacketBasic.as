@@ -1,6 +1,7 @@
 package server.packets
 {
     import flash.utils.ByteArray;
+    import flash.utils.Endian;
 
     import server.CRC32;
     import server.auth.Crypt;
@@ -15,27 +16,50 @@ package server.packets
 
         protected var _buffer: ByteArray;
 
-
+        /**
+         *
+         * @param type
+         * @param buffer
+         */
         public function PacketBasic(type: uint = 0, buffer: ByteArray = null)
         {
             _buffer = buffer ? buffer : new ByteArray();
+            _buffer.endian = Endian.LITTLE_ENDIAN;
             this._type = type;
         }
 
+        /**
+         *
+         */
         public function get buffer(): ByteArray
         {
             return _buffer;
         }
 
+        /**
+         *
+         * @param value
+         */
+        public function set buffer(value: ByteArray): void
+        {
+            _buffer = value;
+        }
+
+        /**
+         *
+         */
         public function get type(): uint
         {
             return _type;
         }
 
-        //public function get buffer
-
+        /**
+         *
+         */
         public function deserialize(): void
         {
+            _buffer.position = 0;
+
             //dataSize
             _buffer.readUnsignedShort();
             //type
@@ -59,6 +83,11 @@ package server.packets
             crypt.encryptSend(_buffer, PACKET_HEADER_SIZE);
         }
 
+        /**
+         *
+         * @param crypt
+         * @param crc
+         */
         public function serialize(crypt: Crypt, crc: CRC32): void
         {
             serializeHeader(crypt, 0, 0);
