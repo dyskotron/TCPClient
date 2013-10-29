@@ -6,8 +6,10 @@ package
 
     import server.TCPCommEvent;
     import server.TCPCommManager;
+    import server.packets.PacketBasic;
     import server.packets.enumAlts.AuthPacketOpcodes;
     import server.packets.enumAlts.GameServerTypes;
+    import server.packets.gameServer.PacketGS_PlayerLogin;
     import server.packets.loginServer.PacketLS_GetServerList;
     import server.packets.loginServer.PacketLS_GetVersion;
 
@@ -16,7 +18,13 @@ package
         private static const LOGIN_SERVER_IP: uint = 3919800155;
         private static const LOGIN_SERVER_PORT: uint = 9339;
 
+        private static const LOGIN_SERVER: uint = 0;
+        private static const GAME_SERVER: uint = 1;
+
+        private static const PLAYER_ID: uint = 5671461435;
+
         private var tcpManager: TCPCommManager;
+        private var server: uint;
 
         public function Main()
         {
@@ -34,12 +42,18 @@ package
 
         }
 
+        private function mouseClickListener(event: MouseEvent): void
+        {
+
+        }
+
         private function packetRecievedHandler(event: TCPCommEvent): void
         {
             switch (event.packetType)
             {
                 case AuthPacketOpcodes.S_MSG_AUTH_CHALLENGE:
                     trace("_MO_", this, 'packet recieved S_MSG_AUTH_CHALLENGE');
+                    handleAuthChallenge(event.packet);
                     break;
 
                 case AuthPacketOpcodes.S_MSG_AUTH_RECHALLENGE:
@@ -48,9 +62,7 @@ package
 
                 case AuthPacketOpcodes.S_MSG_AUTH_SERVER_LIST:
                     trace("_MO_", this, 'packet recieved S_MSG_AUTH_SERVER_LIST');
-                    var packetServerList: PacketLS_GetServerList = PacketLS_GetServerList(event.packet);
-                    tcpManager.disconnect();
-                    tcpManager.connectWithIPAddress(packetServerList.serverIP, packetServerList.serverPort);
+                    handleServerList(event.packet);
                     break;
 
                 case AuthPacketOpcodes.S_MSG_AUTH_GET_SERVER_STATS:
@@ -59,10 +71,45 @@ package
             }
         }
 
-        private function mouseClickListener(event: MouseEvent): void
+        /**
+         * Handles list of game servers from server
+         * @param packet
+         */
+        private function handleServerList(packet: PacketBasic)
         {
+            trace("_MO_", this, 'handleServerList', server);
+            if (server == LOGIN_SERVER)
+            {
+                var packetServerList: PacketLS_GetServerList = PacketLS_GetServerList(packet);
+                tcpManager.disconnect();
+                tcpManager.connectWithIPAddress(packetServerList.serverIP, packetServerList.serverPort);
 
+                var loginPacket: PacketGS_PlayerLogin = new PacketGS_PlayerLogin();
+                loginPacket.playerID = PLAYER_ID;
+                tcpManager.packetSend(loginPacket);
+            }
         }
+
+        /**
+         * Handle get version / login
+         * @param packet
+         */
+        private function handleAuthChallenge(packet: PacketBasic)
+        {
+            trace("_MO_", this, 'handleAuthChallenge', server);
+
+            if (server == LOGIN_SERVER)
+            {
+                var versionPacket: PacketLS_GetVersion = PacketLS_GetVersion(packet);
+                trace("_MO_", this, 'get version response - version:', versionPacket.version);
+            }
+            else if (server == GAME_SERVER)
+            {
+                //var versionPacket: PacketLS_GetVersion = PacketLS_GetVersion(packet);
+                trace("_MO_", this, 'login response');
+            }
+        }
+
 
     }
 }

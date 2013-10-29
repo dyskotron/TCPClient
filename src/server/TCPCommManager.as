@@ -67,7 +67,7 @@ package server
             }
             else
             {
-                trace("_MO_", this, 'PACKET SEND - send');
+                trace("_MO_", this, 'PACKET SEND - send', packet.type);
                 packet.serialize(crypt, crc32);
                 socket.writeBytes(packet.buffer);
             }
@@ -104,6 +104,7 @@ package server
                 packetSend(packetQueue.shift());
 
         }
+
 
         /**
          *
