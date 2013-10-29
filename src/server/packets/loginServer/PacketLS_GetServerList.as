@@ -13,10 +13,14 @@ package server.packets.loginServer
         //uint32
         private var serverType: uint;
         //uint32
-        private var serverIP: uint;
+        private var _serverIP: uint;
         //uint32
-        private var serverPort: uint;
+        private var _serverPort: uint;
 
+        /**
+         *
+         * @param serverType
+         */
         public function PacketLS_GetServerList(serverType: uint)
         {
             super(AuthPacketOpcodes.C_MSG_AUTH_SERVER_LIST);
@@ -24,14 +28,38 @@ package server.packets.loginServer
             this.serverType = serverType;
         }
 
+        /**
+         *
+         */
+        public function get serverIP(): uint
+        {
+            return _serverIP;
+        }
+
+        /**
+         *
+         */
+        public function get serverPort(): uint
+        {
+            return _serverPort;
+        }
+
+        /**
+         *
+         */
         override public function deserialize(): void
         {
             super.deserialize();
 
-            serverIP = buffer.readUnsignedInt();
-            serverPort = buffer.readUnsignedInt();
+            _serverIP = buffer.readUnsignedInt();
+            _serverPort = buffer.readUnsignedInt();
         }
 
+        /**
+         *
+         * @param crypt
+         * @param crc
+         */
         override public function serialize(crypt: Crypt, crc: CRC32): void
         {
             var internalBuffer: ByteArray = new ByteArray();

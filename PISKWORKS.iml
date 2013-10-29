@@ -2,7 +2,7 @@
 <module type="Flex" version="4">
   <component name="FlexBuildConfigurationManager" active="PISKWORKS">
     <configurations>
-      <configuration name="PISKWORKS" target-platform="Desktop" pure-as="true" main-class="VladoServerTest" output-file="PISKWORKS.swf" output-folder="$MODULE_DIR$/out/production/PISKWORKS">
+      <configuration name="PISKWORKS" target-platform="Desktop" pure-as="true" main-class="Main" output-file="PISKWORKS.swf" output-folder="$MODULE_DIR$/out/production/PISKWORKS">
         <dependencies>
           <sdk name="FLEX4.6_AIR3.5" />
         </dependencies>
