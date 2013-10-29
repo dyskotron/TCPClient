@@ -1,6 +1,7 @@
 package server
 {
     import flash.events.Event;
+    import flash.events.EventDispatcher;
     import flash.events.IOErrorEvent;
     import flash.events.ProgressEvent;
     import flash.events.SecurityErrorEvent;
@@ -15,7 +16,7 @@ package server
     import server.packets.loginServer.PacketLS_GetServerList;
     import server.packets.loginServer.PacketLS_GetVersion;
 
-    public class TCPCommManager
+    public class TCPCommManager extends EventDispatcher
     {
         public static const STATE_AWAITING_HEADER: uint = 0;
         public static const STATE_AWAITING_DATA: uint = 1;
@@ -59,12 +60,14 @@ package server
 
         public function packetSend(packet: PacketBasic): void
         {
-            trace("_MO_", this, 'PACKET SEND');
-
             if (!socket.connected)
+            {
+                trace("_MO_", this, 'PACKET SEND - queue');
                 packetQueue.push(packet);
+            }
             else
             {
+                trace("_MO_", this, 'PACKET SEND - send');
                 packet.serialize(crypt, crc32);
                 socket.writeBytes(packet.buffer);
             }
@@ -97,7 +100,7 @@ package server
         {
             trace("_MO_", this, 'CONNECTED');
 
-            while(packetQueue.length > 0)
+            while (packetQueue.length > 0)
                 packetSend(packetQueue.shift());
 
         }
@@ -159,9 +162,8 @@ package server
                 if (socket.bytesAvailable < PacketBasic.PACKET_HEADER_SIZE)
                     return;
 
-                trace("_MO_", this, '->READING HEADER - socket.bytesAvailable', socket.bytesAvailable);
-
                 //read, decrypt & get info from header
+                socketBA.clear();
                 socket.readBytes(socketBA, 0, PacketBasic.PACKET_HEADER_SIZE);
                 crypt.decryptRecv(socketBA, PacketBasic.PACKET_HEADER_SIZE);
                 socketBA.position = 0;
@@ -179,16 +181,12 @@ package server
                 if (socket.bytesAvailable < incomingDataSize)
                     return;
 
-                trace("_MO_", this, '->READING DATA - socket.bytesAvailable', socket.bytesAvailable);
-
                 //read packet data & handle packet
                 socket.readBytes(socketBA, PacketBasic.PACKET_HEADER_SIZE, incomingDataSize);
-                socketBA.position = 0;
-                handlePacket(socketBA, incomingPacketType);
-                //socketBA.clear();
+
+                processPacketData(socketBA, incomingPacketType);
 
                 state = STATE_AWAITING_HEADER;
-
 
                 //if there are some other data in socket, process them
                 if (socket.connected && socket.bytesAvailable > 0)
@@ -196,19 +194,17 @@ package server
             }
         }
 
-        private function handlePacket(socketBA: ByteArray, packetType: uint): void
+        private function processPacketData(socketBA: ByteArray, packetType: uint): void
         {
-            trace("_MO_", this, 'handlePacket', socketBA.length);
-
             var packet: PacketBasic;
+
+            socketBA.position = 0;
 
             switch (packetType)
             {
                 case AuthPacketOpcodes.S_MSG_AUTH_CHALLENGE:
+                    trace("_MO_", this, 'packet recieved S_MSG_AUTH_CHALLENGE');
                     packet = new PacketLS_GetVersion();
-                    packet.buffer.writeBytes(socketBA);
-                    packet.deserialize();
-                    trace("_MO_", this, 'packet recieved S_MSG_AUTH_CHALLENGE', 'version:', PacketLS_GetVersion(packet).version, 'type:', packet.type);
                     break;
 
                 case AuthPacketOpcodes.S_MSG_AUTH_RECHALLENGE:
@@ -216,16 +212,22 @@ package server
                     break;
 
                 case AuthPacketOpcodes.S_MSG_AUTH_SERVER_LIST:
+                    trace("_MO_", this, 'packet recieved S_MSG_AUTH_SERVER_LIST');
                     packet = new PacketLS_GetServerList(GameServerTypes.E_TIC_TAC_TOE);
-                    packet.buffer.writeBytes(socketBA);
-                    packet.deserialize();
-                    trace("_MO_", this, 'packet recieved S_MSG_AUTH_SERVER_LIST', 'serverIP:', getStringIpFromUint(PacketLS_GetServerList(packet).serverIP), 'serverPort:', PacketLS_GetServerList(packet).serverPort);
                     break;
 
                 case AuthPacketOpcodes.S_MSG_AUTH_GET_SERVER_STATS:
                     trace("_MO_", this, 'packet recieved S_MSG_AUTH_GET_SERVER_STATS');
                     break;
             }
+
+            if (packet)
+            {
+                packet.buffer.writeBytes(socketBA);
+                packet.deserialize();
+                dispatchEvent(new TCPCommEvent(TCPCommEvent.PACKET_RECIEVED, packet, packetType));
+            }
+
         }
     }
 }
