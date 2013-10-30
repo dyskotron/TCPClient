@@ -12,6 +12,7 @@ package server
     import server.auth.Crypt;
     import server.packets.GameServerTypes;
     import server.packets.PacketBasic;
+    import server.packets.gameServer.PacketGS_MatchGame;
     import server.packets.gameServer.PacketGS_PingPong;
     import server.packets.gameServer.PacketGS_PlayerLogin;
     import server.packets.loginServer.PacketLS_GetServerList;
@@ -69,14 +70,11 @@ package server
 
         public function packetSend(packet: PacketBasic): void
         {
+            trace("_MO_", this, 'SEND PACKET', packet.type);
             if (!socket.connected)
-            {
-                trace("_MO_", this, 'PACKET SEND - queue');
                 packetQueue.push(packet);
-            }
             else
             {
-                trace("_MO_", this, 'PACKET SEND - send', packet.type);
                 packet.serialize(crypt, crc32);
                 socket.writeBytes(packet.buffer);
             }
@@ -86,7 +84,6 @@ package server
         {
             _serverType = serverType;
         }
-
 
         /**
          *
@@ -171,7 +168,7 @@ package server
          */
         private function socketDataHandler(event: ProgressEvent): void
         {
-            trace("_MO_", this, '=======> INCOMING SOCKET DATA - length', socket.bytesAvailable);
+            //trace("_MO_", this, '=======> INCOMING SOCKET DATA - length', socket.bytesAvailable);
 
             if (state == STATE_AWAITING_HEADER)
             {
@@ -187,7 +184,7 @@ package server
                 incomingDataSize = socketBA.readUnsignedShort();
                 incomingPacketType = socketBA.readUnsignedShort();
                 var crc: uint = socketBA.readUnsignedInt();
-                trace("_MO_", this, 'PACKET TYPE:', incomingPacketType, 'DATA SIZE:', incomingDataSize, 'CRC:', crc.toString(16));
+                trace("_MO_", this, 'INCOMING PACKET TYPE:', incomingPacketType, 'DATA SIZE:', incomingDataSize, 'CRC:', crc.toString(16));
 
                 state = STATE_AWAITING_DATA;
             }
@@ -229,60 +226,49 @@ package server
             {
                 packet.buffer.writeBytes(socketBA);
                 packet.deserialize();
-                dispatchEvent(new TCPCommEvent(TCPCommEvent.PACKET_RECIEVED, packet, packetType));
             }
+            dispatchEvent(new TCPCommEvent(TCPCommEvent.PACKET_RECIEVED, packet, packetType));
 
         }
 
-        private function createPacketLS(packetType: uint): PacketBasic
+        private static function createPacketLS(packetType: uint): PacketBasic
         {
             var packet: PacketBasic;
 
             switch (packetType)
             {
                 case AuthPacketOpcodes.S_MSG_AUTH_CHALLENGE:
-                    trace("_MO_", this, 'packet recieved S_MSG_AUTH_CHALLENGE');
                     packet = new PacketLS_GetVersion();
                     break;
-
                 case AuthPacketOpcodes.S_MSG_AUTH_RECHALLENGE:
-                    trace("_MO_", this, 'packet recieved S_MSG_AUTH_RECHALLENGE - NOT HANDLED');
                     break;
-
                 case AuthPacketOpcodes.S_MSG_AUTH_SERVER_LIST:
-                    trace("_MO_", this, 'packet recieved S_MSG_AUTH_SERVER_LIST');
                     packet = new PacketLS_GetServerList(GameServerTypes.E_TIC_TAC_TOE);
                     break;
-
                 case AuthPacketOpcodes.S_MSG_AUTH_GET_SERVER_STATS:
-                    trace("_MO_", this, 'packet recieved S_MSG_AUTH_GET_SERVER_STATS - NOT HANDLED');
                     break;
-
-                default:
-                    trace("_MO_", this, 'UNKNOWN LOGIN SERVER PACKET - type:', packetType);
             }
 
             return packet;
         }
 
-        private function createPacketGS(packetType: uint): PacketBasic
+        private static function createPacketGS(packetType: uint): PacketBasic
         {
             var packet: PacketBasic;
 
             switch (packetType)
             {
                 case ClientOpcodes.S_MSG_LOGON_PLAYER:
-                    trace("_MO_", this, 'packet recieved S_MSG_LOGON_PLAYER');
                     packet = new PacketGS_PlayerLogin();
                     break;
 
-                case ClientOpcodes.S_MSG_PING:
-                    trace("_MO_", this, 'packet recieved S_MSG_PING');
-                    packet = new PacketGS_PingPong();
+                case ClientOpcodes.S_MSG_MATCH_GAME:
+                    packet = new PacketGS_MatchGame();
                     break;
 
-                default:
-                    trace("_MO_", this, 'UNKNOWN GAME SERVER PACKET - type:', packetType);
+                case ClientOpcodes.S_MSG_PING:
+                    packet = new PacketGS_PingPong();
+                    break;
             }
 
             return packet;

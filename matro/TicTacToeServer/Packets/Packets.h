@@ -70,7 +70,7 @@ public:
         m_pBuffer->append(pData, size);
     }
 
-    CC_SYNTHESIZE(SEL_PacketListener, m_pListener, Listener)
+    (SEL_PacketListener, m_pListener, Listener)
     CC_SYNTHESIZE(bool, m_bIsMandatoryForUI, IsMandatoryForUI)
     
 protected:

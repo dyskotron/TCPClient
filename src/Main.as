@@ -2,17 +2,22 @@ package
 {
 
     import flash.display.Sprite;
+    import flash.events.MouseEvent;
 
     import server.TCPCommEvent;
     import server.TCPCommManager;
     import server.packets.GameServerTypes;
     import server.packets.PacketBasic;
+    import server.packets.PacketClientData;
+    import server.packets.gameServer.PacketGS_MatchGame;
     import server.packets.gameServer.PacketGS_PingPong;
     import server.packets.gameServer.PacketGS_PlayerLogin;
     import server.packets.loginServer.PacketLS_GetServerList;
     import server.packets.loginServer.PacketLS_GetVersion;
     import server.packets.opcodes.AuthPacketOpcodes;
     import server.packets.opcodes.ClientOpcodes;
+
+    import ui.BasicButton;
 
     public class Main extends Sprite
     {
@@ -22,18 +27,19 @@ package
         private static const PLAYER_ID: uint = 625568080;
 
         private var tcpManager: TCPCommManager;
+        private var lastButtonY: int = 30;
 
 
         public function Main()
         {
             trace("_MO_", this, 'START');
 
+            initUI();
+
 
             tcpManager = new TCPCommManager();
             tcpManager.addEventListener(TCPCommEvent.PACKET_RECIEVED, packetLS_RecievedHandler);
             tcpManager.connectWithIPAddress(LOGIN_SERVER_IP, LOGIN_SERVER_PORT);
-            tcpManager.packetSend(new PacketLS_GetVersion());
-            tcpManager.packetSend(new PacketLS_GetServerList(GameServerTypes.E_TIC_TAC_TOE));
 
 
             /*
@@ -54,7 +60,49 @@ package
              */
         }
 
-        //==========================================================================================================//
+        private function initUI(): void
+        {
+            var loginButton: BasicButton = new BasicButton('LOGIN');
+            loginButton.addEventListener(MouseEvent.CLICK, login_clickHandler);
+            addButton(loginButton);
+
+            var startMatchButton: BasicButton = new BasicButton('START MATCH');
+            startMatchButton.addEventListener(MouseEvent.CLICK, startMatch_clickHandler);
+            addButton(startMatchButton);
+
+            var sendMsgButton: BasicButton = new BasicButton('SEND MSG');
+            sendMsgButton.addEventListener(MouseEvent.CLICK, sendMsg_clickHandler);
+            addButton(sendMsgButton);
+
+        }
+
+        private function addButton(button: BasicButton): void
+        {
+            addChild(button);
+            button.x = (stage.stageWidth - button.width) / 2;
+            button.y = lastButtonY;
+            lastButtonY += 50;
+        }
+
+        private function login_clickHandler(event: MouseEvent): void
+        {
+            tcpManager.packetSend(new PacketLS_GetVersion());
+            tcpManager.packetSend(new PacketLS_GetServerList(GameServerTypes.E_TIC_TAC_TOE));
+        }
+
+        private function startMatch_clickHandler(event: MouseEvent): void
+        {
+            tcpManager.packetSend(new PacketGS_MatchGame());
+        }
+
+        private function sendMsg_clickHandler(event: MouseEvent): void
+        {
+            var clientPacket: PacketClientData = new PacketClientData();
+            clientPacket.dataType = 10;
+            tcpManager.packetSend(clientPacket);
+        }
+
+        //========================================= LOGIN SERVER ===================================================//
 
         /**
          *  Handles packets recieved from login server
@@ -81,11 +129,14 @@ package
                 case AuthPacketOpcodes.S_MSG_AUTH_GET_SERVER_STATS:
                     trace("_MO_", this, 'packet recieved S_MSG_AUTH_GET_SERVER_STATS');
                     break;
+
+                default:
+                    trace("_MO_", this, 'UNKNOWN LOGIN PACKET type:', event.packetType);
             }
         }
 
         /**
-         * Handles list of game servers
+         * Take first game server in list and connect to it
          * @param packet
          */
         private function handleServerList(packet: PacketBasic): void
@@ -100,9 +151,9 @@ package
 
             tcpManager.connectWithIPAddress(packetServerList.serverIP, packetServerList.serverPort);
 
-
             var loginPacket: PacketGS_PlayerLogin = new PacketGS_PlayerLogin();
-            loginPacket.playerID = PLAYER_ID;
+            //TODO:get player ID
+            loginPacket.playerID = int(Math.random() * 156489);//PLAYER_ID;
             tcpManager.packetSend(loginPacket);
         }
 
@@ -116,11 +167,10 @@ package
 
             var versionPacket: PacketLS_GetVersion = PacketLS_GetVersion(packet);
             trace("_MO_", this, 'get version response - version:', versionPacket.version);
-
         }
 
 
-        //==========================================================================================================//
+        //=========================================== GAME SERVER ===================================================//
 
         /**
          * Process packets recieved from game server
@@ -135,34 +185,57 @@ package
                     handleLogonPlayer(event.packet);
                     break;
 
+                case ClientOpcodes.S_MSG_MATCH_GAME:
+                    trace("_MO_", this, 'packet recieved S_MSG_MATCH_GAME');
+                    handleMatchGame(event.packet);
+                    break;
+
                 case ClientOpcodes.S_MSG_PING:
                     trace("_MO_", this, 'packet recieved S_MSG_PING');
                     handlePingPong(event.packet);
                     break;
+
+                default:
+                    trace("_MO_", this, 'UNKNOWN GAME PACKET type:', event.packetType);
             }
         }
 
         /**
-         * Handle player log on
+         * Player is logged in
          * @param packet
          */
         private function handleLogonPlayer(packet: PacketBasic): void
         {
-            trace("_MO_", this, 'handleLogonPlayer');
+            trace("_MO_", this, 'login sucesfull');
         }
 
         /**
-         * Handle ping pong
+         * Player is matched with opponent
+         * @param packet
+         */
+        private function handleMatchGame(packet: PacketBasic): void
+        {
+            var matchGamePacket: PacketGS_MatchGame = PacketGS_MatchGame(packet);
+
+            trace("_MO_", this, 'match game found - opponentID:', matchGamePacket.opponentID, 'status:', matchGamePacket.status);
+        }
+
+        /**
+         * Ping pong
          * @param packet
          */
         private function handlePingPong(packet: PacketBasic): void
         {
-            trace("_MO_", this, 'handlePingPong');
+            /*
+             trace("_MO_", this, 'handlePingPong');
 
-            var pingPacket: PacketGS_PingPong = PacketGS_PingPong(packet);
-            trace("_MO_", this, 'ping pong - timestamp:', pingPacket.timestamp);
-
+             var pingPacket: PacketGS_PingPong = PacketGS_PingPong(packet);
+             trace("_MO_", this, 'ping pong - timestamp:', pingPacket.timestamp);
+             */
             tcpManager.packetSend(new PacketGS_PingPong());
         }
+
+        //=========================================== CLIENT DATA ===================================================//
+
     }
 }
