@@ -6,7 +6,7 @@ package server.packets.loginServer
     import server.CRC32;
     import server.auth.Crypt;
     import server.packets.PacketBasic;
-    import server.packets.enumAlts.AuthPacketOpcodes;
+    import server.packets.opCodes.AuthPacketOpcodes;
 
     public class PacketLS_GetServerList extends PacketBasic
     {

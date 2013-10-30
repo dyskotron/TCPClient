@@ -1,4 +1,4 @@
-package server.packets.enumAlts
+package server.packets.opCodes
 {
     public class AuthPacketOpcodes
     {

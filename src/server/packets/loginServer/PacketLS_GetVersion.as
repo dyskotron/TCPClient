@@ -1,7 +1,7 @@
 package server.packets.loginServer
 {
     import server.packets.PacketBasic;
-    import server.packets.enumAlts.AuthPacketOpcodes;
+    import server.packets.opCodes.AuthPacketOpcodes;
 
     public class PacketLS_GetVersion extends PacketBasic
     {

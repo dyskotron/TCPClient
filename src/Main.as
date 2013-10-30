@@ -7,8 +7,8 @@ package
     import server.TCPCommEvent;
     import server.TCPCommManager;
     import server.packets.PacketBasic;
-    import server.packets.enumAlts.AuthPacketOpcodes;
-    import server.packets.enumAlts.GameServerTypes;
+    import server.packets.opCodes.AuthPacketOpcodes;
+    import server.packets.GameServerTypes;
     import server.packets.gameServer.PacketGS_PlayerLogin;
     import server.packets.loginServer.PacketLS_GetServerList;
     import server.packets.loginServer.PacketLS_GetVersion;
@@ -21,7 +21,8 @@ package
         private static const LOGIN_SERVER: uint = 0;
         private static const GAME_SERVER: uint = 1;
 
-        private static const PLAYER_ID: uint = 5671461435;
+        private static const SERVER_TIC_TAC_TOE: uint = 1;
+        private static const PLAYER_ID: uint = 625568080;
 
         private var tcpManager: TCPCommManager;
         private var server: uint;
@@ -47,6 +48,10 @@ package
 
         }
 
+        /**
+         *
+         * @param event
+         */
         private function packetRecievedHandler(event: TCPCommEvent): void
         {
             switch (event.packetType)
@@ -75,7 +80,7 @@ package
          * Handles list of game servers from server
          * @param packet
          */
-        private function handleServerList(packet: PacketBasic)
+        private function handleServerList(packet: PacketBasic): void
         {
             trace("_MO_", this, 'handleServerList', server);
             if (server == LOGIN_SERVER)
@@ -83,6 +88,7 @@ package
                 var packetServerList: PacketLS_GetServerList = PacketLS_GetServerList(packet);
                 tcpManager.disconnect();
                 tcpManager.connectWithIPAddress(packetServerList.serverIP, packetServerList.serverPort);
+                server = GAME_SERVER;
 
                 var loginPacket: PacketGS_PlayerLogin = new PacketGS_PlayerLogin();
                 loginPacket.playerID = PLAYER_ID;
@@ -94,7 +100,7 @@ package
          * Handle get version / login
          * @param packet
          */
-        private function handleAuthChallenge(packet: PacketBasic)
+        private function handleAuthChallenge(packet: PacketBasic): void
         {
             trace("_MO_", this, 'handleAuthChallenge', server);
 

@@ -6,7 +6,7 @@ package server.packets.gameServer
     import server.CRC32;
     import server.auth.Crypt;
     import server.packets.PacketBasic;
-    import server.packets.enumAlts.AuthPacketOpcodes;
+    import server.packets.opCodes.ClientOpcodes;
 
     public class PacketGS_PlayerLogin extends PacketBasic
     {
@@ -22,7 +22,7 @@ package server.packets.gameServer
          */
         public function PacketGS_PlayerLogin()
         {
-            super(AuthPacketOpcodes.C_MSG_AUTH_CHALLENGE);
+            super(ClientOpcodes.C_MSG_LOGON_PLAYER);
         }
 
         /**
@@ -55,6 +55,7 @@ package server.packets.gameServer
         {
             var internalBuffer: ByteArray = new ByteArray();
             internalBuffer.endian = Endian.LITTLE_ENDIAN;
+            //TODO: write as uint64
             internalBuffer.writeDouble(_playerID);
 
             serializeHeader(crypt, internalBuffer.length, crc.computeCRC32(internalBuffer));

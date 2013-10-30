@@ -11,8 +11,8 @@ package server
 
     import server.auth.Crypt;
     import server.packets.PacketBasic;
-    import server.packets.enumAlts.AuthPacketOpcodes;
-    import server.packets.enumAlts.GameServerTypes;
+    import server.packets.opCodes.AuthPacketOpcodes;
+    import server.packets.GameServerTypes;
     import server.packets.loginServer.PacketLS_GetServerList;
     import server.packets.loginServer.PacketLS_GetVersion;
 
@@ -99,6 +99,8 @@ package server
         private function connectHandler(event: Event): void
         {
             trace("_MO_", this, 'CONNECTED');
+
+            crypt.reset();
 
             while (packetQueue.length > 0)
                 packetSend(packetQueue.shift());

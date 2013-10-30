@@ -15,10 +15,7 @@ package server.auth
 
         public function Crypt()
         {
-            sendI = 0;
-            sendJ = 0;
-            recvI = 0;
-            recvJ = 0;
+            reset();
         }
 
         public function decryptRecv(data: ByteArray, size: uint): void
@@ -44,6 +41,14 @@ package server.auth
                 data[i] = sendJ = (data[i] ^ CRYPT_KEY.charCodeAt(sendI)) + sendJ;
                 sendI++;
             }
+        }
+
+        public function reset(): void
+        {
+            sendI = 0;
+            sendJ = 0;
+            recvI = 0;
+            recvJ = 0;
         }
     }
 }
