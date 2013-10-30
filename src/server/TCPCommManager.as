@@ -10,16 +10,22 @@ package server
     import flash.utils.Endian;
 
     import server.auth.Crypt;
-    import server.packets.PacketBasic;
-    import server.packets.opCodes.AuthPacketOpcodes;
     import server.packets.GameServerTypes;
+    import server.packets.PacketBasic;
+    import server.packets.gameServer.PacketGS_PingPong;
+    import server.packets.gameServer.PacketGS_PlayerLogin;
     import server.packets.loginServer.PacketLS_GetServerList;
     import server.packets.loginServer.PacketLS_GetVersion;
+    import server.packets.opcodes.AuthPacketOpcodes;
+    import server.packets.opcodes.ClientOpcodes;
 
     public class TCPCommManager extends EventDispatcher
     {
-        public static const STATE_AWAITING_HEADER: uint = 0;
-        public static const STATE_AWAITING_DATA: uint = 1;
+        public static const SERVER_TYPE_LOGIN: uint = 0;
+        public static const SERVER_TYPE_GAME: uint = 1;
+
+        private static const STATE_AWAITING_HEADER: uint = 0;
+        private static const STATE_AWAITING_DATA: uint = 1;
 
         private var state: uint = STATE_AWAITING_HEADER;
 
@@ -32,6 +38,7 @@ package server
 
         private var incomingDataSize: uint;
         private var incomingPacketType: uint;
+        private var _serverType: uint;
 
         public function TCPCommManager()
         {
@@ -42,6 +49,8 @@ package server
             socketBA.endian = Endian.LITTLE_ENDIAN;
 
             packetQueue = new Vector.<PacketBasic>();
+
+            _serverType = SERVER_TYPE_LOGIN;
         }
 
         public function connectWithIPAddress(ip: uint, port: uint): void
@@ -72,6 +81,12 @@ package server
                 socket.writeBytes(packet.buffer);
             }
         }
+
+        public function set serverType(serverType: uint): void
+        {
+            _serverType = serverType;
+        }
+
 
         /**
          *
@@ -106,7 +121,6 @@ package server
                 packetSend(packetQueue.shift());
 
         }
-
 
         /**
          *
@@ -199,9 +213,30 @@ package server
 
         private function processPacketData(socketBA: ByteArray, packetType: uint): void
         {
+            socketBA.position = 0;
+
             var packet: PacketBasic;
 
-            socketBA.position = 0;
+            if (_serverType == SERVER_TYPE_LOGIN)
+                packet = createPacketLS(packetType);
+            else if (_serverType == SERVER_TYPE_GAME)
+                packet = createPacketGS(packetType);
+            else
+                trace("_MO_", this, 'WAT? UNKNOWN SERVER TYPE?');
+
+
+            if (packet)
+            {
+                packet.buffer.writeBytes(socketBA);
+                packet.deserialize();
+                dispatchEvent(new TCPCommEvent(TCPCommEvent.PACKET_RECIEVED, packet, packetType));
+            }
+
+        }
+
+        private function createPacketLS(packetType: uint): PacketBasic
+        {
+            var packet: PacketBasic;
 
             switch (packetType)
             {
@@ -211,7 +246,7 @@ package server
                     break;
 
                 case AuthPacketOpcodes.S_MSG_AUTH_RECHALLENGE:
-                    trace("_MO_", this, 'packet recieved S_MSG_AUTH_RECHALLENGE');
+                    trace("_MO_", this, 'packet recieved S_MSG_AUTH_RECHALLENGE - NOT HANDLED');
                     break;
 
                 case AuthPacketOpcodes.S_MSG_AUTH_SERVER_LIST:
@@ -220,17 +255,37 @@ package server
                     break;
 
                 case AuthPacketOpcodes.S_MSG_AUTH_GET_SERVER_STATS:
-                    trace("_MO_", this, 'packet recieved S_MSG_AUTH_GET_SERVER_STATS');
+                    trace("_MO_", this, 'packet recieved S_MSG_AUTH_GET_SERVER_STATS - NOT HANDLED');
                     break;
+
+                default:
+                    trace("_MO_", this, 'UNKNOWN LOGIN SERVER PACKET - type:', packetType);
             }
 
-            if (packet)
+            return packet;
+        }
+
+        private function createPacketGS(packetType: uint): PacketBasic
+        {
+            var packet: PacketBasic;
+
+            switch (packetType)
             {
-                packet.buffer.writeBytes(socketBA);
-                packet.deserialize();
-                dispatchEvent(new TCPCommEvent(TCPCommEvent.PACKET_RECIEVED, packet, packetType));
+                case ClientOpcodes.S_MSG_LOGON_PLAYER:
+                    trace("_MO_", this, 'packet recieved S_MSG_LOGON_PLAYER');
+                    packet = new PacketGS_PlayerLogin();
+                    break;
+
+                case ClientOpcodes.S_MSG_PING:
+                    trace("_MO_", this, 'packet recieved S_MSG_PING');
+                    packet = new PacketGS_PingPong();
+                    break;
+
+                default:
+                    trace("_MO_", this, 'UNKNOWN GAME SERVER PACKET - type:', packetType);
             }
 
+            return packet;
         }
     }
 }

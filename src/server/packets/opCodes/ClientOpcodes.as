@@ -1,4 +1,4 @@
-package server.packets.opCodes
+package server.packets.opcodes
 {
     public class ClientOpcodes
     {

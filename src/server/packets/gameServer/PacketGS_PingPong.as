@@ -8,34 +8,28 @@ package server.packets.gameServer
     import server.packets.PacketBasic;
     import server.packets.opcodes.ClientOpcodes;
 
-    public class PacketGS_PlayerLogin extends PacketBasic
+    public class PacketGS_PingPong extends PacketBasic
     {
         //uint64
-        private var _playerID: uint;
-
-        //FacebookUser
-        private var _user: uint;
+        private var _timestamp: uint = 0;
 
         /**
          *
          * @param serverType
          */
-        public function PacketGS_PlayerLogin()
+        public function PacketGS_PingPong()
         {
-            super(ClientOpcodes.C_MSG_LOGON_PLAYER);
+            super(ClientOpcodes.C_MSG_PONG);
         }
 
-        /**
-         *
-         */
-        public function set playerID(value: uint): void
+        public function get timestamp(): uint
         {
-            _playerID = value;
+            return _timestamp;
         }
 
-        public function get user(): uint
+        public function set timestamp(value: uint): void
         {
-            return _user;
+            _timestamp = value;
         }
 
         /**
@@ -44,6 +38,8 @@ package server.packets.gameServer
         override public function deserialize(): void
         {
             super.deserialize();
+
+            _timestamp = _buffer.readDouble();
         }
 
         /**
@@ -56,7 +52,7 @@ package server.packets.gameServer
             var internalBuffer: ByteArray = new ByteArray();
             internalBuffer.endian = Endian.LITTLE_ENDIAN;
             //TODO: write as uint64
-            internalBuffer.writeDouble(_playerID);
+            internalBuffer.writeDouble(_timestamp);
 
             serializeHeader(crypt, internalBuffer.length, crc.computeCRC32(internalBuffer));
 
