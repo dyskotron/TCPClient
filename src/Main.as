@@ -3,20 +3,22 @@ package
 
     import flash.display.Sprite;
     import flash.events.MouseEvent;
-    import flash.events.TimerEvent;
-    import flash.utils.Timer;
 
     import server.TCPCommEvent;
     import server.TCPCommManager;
     import server.packets.GameServerTypes;
     import server.packets.PacketBasic;
     import server.packets.PacketClientData;
+    import server.packets.client.PacketC_Turn;
+    import server.packets.client.PacketC_TurnStart;
+    import server.packets.client.PacketC_TurnTimeOut;
     import server.packets.gameServer.PacketGS_MatchGame;
     import server.packets.gameServer.PacketGS_PingPong;
     import server.packets.gameServer.PacketGS_PlayerLogin;
     import server.packets.loginServer.PacketLS_GetServerList;
     import server.packets.loginServer.PacketLS_GetVersion;
     import server.packets.opcodes.AuthPacketOpcodes;
+    import server.packets.opcodes.ClientDataOpcodes;
     import server.packets.opcodes.ClientOpcodes;
 
     import ui.BasicButton;
@@ -79,17 +81,7 @@ package
 
             diode = new Diode();
             addChild(diode);
-            diode.x = diode.y = 20;
-
-            var tmr: Timer = new Timer(1000);
-            tmr.addEventListener(TimerEvent.TIMER, timerHandler);
-            tmr.start();
-
-        }
-
-        private function timerHandler(event: TimerEvent): void
-        {
-            diode.blink();
+            diode.x = diode.y = 15;
         }
 
         private function addButton(button: BasicButton): void
@@ -130,20 +122,20 @@ package
             {
                 case AuthPacketOpcodes.S_MSG_AUTH_CHALLENGE:
                     trace("_MO_", this, 'packet recieved S_MSG_AUTH_CHALLENGE');
-                    handleAuthChallenge(event.packet);
+                    handleAuthChallenge(PacketLS_GetVersion(event.packet));
                     break;
 
                 case AuthPacketOpcodes.S_MSG_AUTH_RECHALLENGE:
-                    trace("_MO_", this, 'packet recieved S_MSG_AUTH_RECHALLENGE');
+                    trace("_MO_", this, 'packet recieved S_MSG_AUTH_RECHALLENGE -  NOT HANDLED');
                     break;
 
                 case AuthPacketOpcodes.S_MSG_AUTH_SERVER_LIST:
                     trace("_MO_", this, 'packet recieved S_MSG_AUTH_SERVER_LIST');
-                    handleServerList(event.packet);
+                    handleServerList(PacketLS_GetServerList(event.packet));
                     break;
 
                 case AuthPacketOpcodes.S_MSG_AUTH_GET_SERVER_STATS:
-                    trace("_MO_", this, 'packet recieved S_MSG_AUTH_GET_SERVER_STATS');
+                    trace("_MO_", this, 'packet recieved S_MSG_AUTH_GET_SERVER_STATS -  NOT HANDLED');
                     break;
 
                 default:
@@ -155,11 +147,10 @@ package
          * Take first game server in list and connect to it
          * @param packet
          */
-        private function handleServerList(packet: PacketBasic): void
+        private function handleServerList(packetServerList: PacketLS_GetServerList): void
         {
-            trace("_MO_", this, 'handleServerList');
+            trace("_MO_", this, 'get server list - serverIP:', packetServerList.serverIP, 'serverPort:', packetServerList.serverPort);
 
-            var packetServerList: PacketLS_GetServerList = PacketLS_GetServerList(packet);
             tcpManager.disconnect();
             tcpManager.removeEventListener(TCPCommEvent.PACKET_RECIEVED, packetLS_RecievedHandler);
             tcpManager.addEventListener(TCPCommEvent.PACKET_RECIEVED, packetGS_RecievedHandler);
@@ -177,11 +168,8 @@ package
          * Handle get version
          * @param packet
          */
-        private function handleAuthChallenge(packet: PacketBasic): void
+        private function handleAuthChallenge(versionPacket: PacketLS_GetVersion): void
         {
-            trace("_MO_", this, 'handleAuthChallenge');
-
-            var versionPacket: PacketLS_GetVersion = PacketLS_GetVersion(packet);
             trace("_MO_", this, 'get version response - version:', versionPacket.version);
         }
 
@@ -189,7 +177,7 @@ package
         //=========================================== GAME SERVER ===================================================//
 
         /**
-         * Process packets recieved from game server
+         * Process packets received from game server
          * @param event
          */
         private function packetGS_RecievedHandler(event: TCPCommEvent): void
@@ -208,6 +196,7 @@ package
 
                 case ClientOpcodes.S_MSG_SEND_DATA_TO_CLIENT:
                     trace("_MO_", this, 'packet recieved S_MSG_SEND_DATA_TO_CLIENT - NOT HANDLED YET');
+                    handleClientPacket(PacketClientData(event.packet));
                     break;
 
                 case ClientOpcodes.S_MSG_PING:
@@ -246,16 +235,56 @@ package
          */
         private function handlePingPong(packet: PacketBasic): void
         {
-            /*
-             trace("_MO_", this, 'handlePingPong');
-
-             var pingPacket: PacketGS_PingPong = PacketGS_PingPong(packet);
-             trace("_MO_", this, 'ping pong - timestamp:', pingPacket.timestamp);
-             */
+            //trace("_MO_", this, 'ping pong - timestamp:', pingPacket.timestamp);
             tcpManager.packetSend(new PacketGS_PingPong());
+            diode.blink();
         }
 
         //=========================================== CLIENT DATA ===================================================//
+
+        /**
+         * Process client packets received from game server
+         * @param event
+         */
+        private function handleClientPacket(packet: PacketClientData): void
+        {
+            switch (packet.dataType)
+            {
+                case ClientDataOpcodes.C_MSG_CLIENT_DATA_TURN_START:
+                    trace("_MO_", this, 'packet recieved C_MSG_CLIENT_DATA_TURN_START');
+                    handleTurnStart(PacketC_TurnStart(packet));
+                    break;
+
+                case ClientDataOpcodes.C_MSG_CLIENT_DATA_TURN_TIMEOUT:
+                    trace("_MO_", this, 'packet recieved C_MSG_CLIENT_DATA_TURN_TIMEOUT');
+                    handleTurnTimeout(PacketC_TurnTimeOut(packet));
+                    break;
+
+                case ClientDataOpcodes.C_MSG_CLIENT_DATA_TURN:
+                    trace("_MO_", this, 'packet recieved C_MSG_CLIENT_DATA_TURN');
+                    handleTurn(PacketC_Turn(packet));
+                    break;
+
+                default:
+                    trace("_MO_", this, 'UNKNOWN CLIENT PACKET type:', packet.dataType);
+            }
+        }
+
+
+        private function handleTurnStart(packetCTurnStart: PacketC_TurnStart): void
+        {
+            trace("_MO_", this, 'get packetCTurnStart');
+        }
+
+        private function handleTurnTimeout(packetCTurnTimeOut: PacketC_TurnTimeOut): void
+        {
+            trace("_MO_", this, 'get packetCTurnTimeOut');
+        }
+
+        private function handleTurn(packetCTurn: PacketC_Turn): void
+        {
+            trace("_MO_", this, 'get packetCTurn - posX:', packetCTurn.posX, 'posY:', packetCTurn.posY);
+        }
 
     }
 }

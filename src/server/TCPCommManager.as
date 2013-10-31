@@ -12,6 +12,9 @@ package server
     import server.auth.Crypt;
     import server.packets.GameServerTypes;
     import server.packets.PacketBasic;
+    import server.packets.client.PacketC_Turn;
+    import server.packets.client.PacketC_TurnStart;
+    import server.packets.client.PacketC_TurnTimeOut;
     import server.packets.gameServer.PacketGS_MatchGame;
     import server.packets.gameServer.PacketGS_PingPong;
     import server.packets.gameServer.PacketGS_PlayerLogin;
@@ -300,15 +303,15 @@ package server
             switch (dataType)
             {
                 case ClientDataOpcodes.C_MSG_CLIENT_DATA_TURN_START:
-                    packet = new PacketGS_PlayerLogin();
+                    packet = new PacketC_TurnStart();
                     break;
 
                 case ClientDataOpcodes.C_MSG_CLIENT_DATA_TURN_TIMEOUT:
-                    packet = new PacketGS_MatchGame();
+                    packet = new PacketC_TurnTimeOut();
                     break;
 
                 case ClientDataOpcodes.C_MSG_CLIENT_DATA_TURN:
-                    packet = new PacketGS_PingPong();
+                    packet = new PacketC_Turn();
                     break;
             }
 
