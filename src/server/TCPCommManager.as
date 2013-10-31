@@ -18,6 +18,7 @@ package server
     import server.packets.loginServer.PacketLS_GetServerList;
     import server.packets.loginServer.PacketLS_GetVersion;
     import server.packets.opcodes.AuthPacketOpcodes;
+    import server.packets.opcodes.ClientDataOpcodes;
     import server.packets.opcodes.ClientOpcodes;
 
     public class TCPCommManager extends EventDispatcher
@@ -40,6 +41,7 @@ package server
         private var incomingDataSize: uint;
         private var incomingPacketType: uint;
         private var _serverType: uint;
+        private var clientDataType: uint;
 
         public function TCPCommManager()
         {
@@ -183,8 +185,15 @@ package server
                 socketBA.position = 0;
                 incomingDataSize = socketBA.readUnsignedShort();
                 incomingPacketType = socketBA.readUnsignedShort();
+
+                /**only for debug*/
                 var crc: uint = socketBA.readUnsignedInt();
                 trace("_MO_", this, 'INCOMING PACKET TYPE:', incomingPacketType, 'DATA SIZE:', incomingDataSize, 'CRC:', crc.toString(16));
+                /**/
+
+                //clent packet data have own header - data is actually 1 byte longer then what is in header
+                if (_serverType == SERVER_TYPE_GAME && incomingPacketType == ClientOpcodes.S_MSG_SEND_DATA_TO_CLIENT)
+                    incomingDataSize++;
 
                 state = STATE_AWAITING_DATA;
             }
@@ -195,10 +204,18 @@ package server
                 if (socket.bytesAvailable < incomingDataSize)
                     return;
 
-                //read packet data & handle packet
-                socket.readBytes(socketBA, PacketBasic.PACKET_HEADER_SIZE, incomingDataSize);
+                //read packet data
+                socket.readBytes(socketBA, socketBA.length, incomingDataSize);
 
-                processPacketData(socketBA, incomingPacketType);
+                //if client packet, get data type
+                if (_serverType == SERVER_TYPE_GAME && incomingPacketType == ClientOpcodes.S_MSG_SEND_DATA_TO_CLIENT)
+                {
+                    socketBA.position = PacketBasic.PACKET_HEADER_SIZE;
+                    clientDataType = socketBA.readUnsignedByte();
+                    trace("_MO_", this, 'CLIENT DATA TYPE', clientDataType);
+                }
+
+                processPacketData(socketBA, incomingPacketType, clientDataType);
 
                 state = STATE_AWAITING_HEADER;
 
@@ -208,16 +225,18 @@ package server
             }
         }
 
-        private function processPacketData(socketBA: ByteArray, packetType: uint): void
+        private function processPacketData(socketBA: ByteArray, packetType: uint, clientDataType: uint): void
         {
             socketBA.position = 0;
 
             var packet: PacketBasic;
 
-            if (_serverType == SERVER_TYPE_LOGIN)
-                packet = createPacketLS(packetType);
+            if (_serverType == SERVER_TYPE_GAME && packetType == ClientOpcodes.C_MSG_SEND_DATA_TO_CLIENT)
+                packet = createPacketC(clientDataType);
             else if (_serverType == SERVER_TYPE_GAME)
                 packet = createPacketGS(packetType);
+            else if (_serverType == SERVER_TYPE_LOGIN)
+                packet = createPacketLS(packetType);
             else
                 trace("_MO_", this, 'WAT? UNKNOWN SERVER TYPE?');
 
@@ -267,6 +286,28 @@ package server
                     break;
 
                 case ClientOpcodes.S_MSG_PING:
+                    packet = new PacketGS_PingPong();
+                    break;
+            }
+
+            return packet;
+        }
+
+        private static function createPacketC(dataType: uint): PacketBasic
+        {
+            var packet: PacketBasic;
+
+            switch (dataType)
+            {
+                case ClientDataOpcodes.C_MSG_CLIENT_DATA_TURN_START:
+                    packet = new PacketGS_PlayerLogin();
+                    break;
+
+                case ClientDataOpcodes.C_MSG_CLIENT_DATA_TURN_TIMEOUT:
+                    packet = new PacketGS_MatchGame();
+                    break;
+
+                case ClientDataOpcodes.C_MSG_CLIENT_DATA_TURN:
                     packet = new PacketGS_PingPong();
                     break;
             }

@@ -1,9 +1,5 @@
 package server.packets
 {
-    import flash.utils.ByteArray;
-    import flash.utils.Endian;
-
-    import server.CRC32;
     import server.auth.Crypt;
     import server.packets.opcodes.ClientOpcodes;
 
@@ -38,17 +34,14 @@ package server.packets
         /**
          *
          * @param crypt
-         * @param crc
+         * @param dataSize (uint16)
+         * @param crc32 (uint32)
          */
-        override public function serialize(crypt: Crypt, crc: CRC32): void
+        override public function serializeHeader(crypt: Crypt, dataSize: uint, crc32: uint): void
         {
-            var internalBuffer: ByteArray = new ByteArray();
-            internalBuffer.endian = Endian.LITTLE_ENDIAN;
-            internalBuffer.writeByte(_dataType);
+            super.serializeHeader(crypt, dataSize, crc32);
 
-            serializeHeader(crypt, internalBuffer.length, crc.computeCRC32(internalBuffer));
-
-            _buffer.writeBytes(internalBuffer);
+            _buffer.writeByte(_dataType);
         }
     }
 }

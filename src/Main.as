@@ -3,6 +3,8 @@ package
 
     import flash.display.Sprite;
     import flash.events.MouseEvent;
+    import flash.events.TimerEvent;
+    import flash.utils.Timer;
 
     import server.TCPCommEvent;
     import server.TCPCommManager;
@@ -18,6 +20,7 @@ package
     import server.packets.opcodes.ClientOpcodes;
 
     import ui.BasicButton;
+    import ui.Diode;
 
     public class Main extends Sprite
     {
@@ -28,6 +31,7 @@ package
 
         private var tcpManager: TCPCommManager;
         private var lastButtonY: int = 30;
+        private var diode: Diode;
 
 
         public function Main()
@@ -40,7 +44,6 @@ package
             tcpManager = new TCPCommManager();
             tcpManager.addEventListener(TCPCommEvent.PACKET_RECIEVED, packetLS_RecievedHandler);
             tcpManager.connectWithIPAddress(LOGIN_SERVER_IP, LOGIN_SERVER_PORT);
-
 
             /*
              var uint32_1: uint = 0x01234567;
@@ -74,6 +77,19 @@ package
             sendMsgButton.addEventListener(MouseEvent.CLICK, sendMsg_clickHandler);
             addButton(sendMsgButton);
 
+            diode = new Diode();
+            addChild(diode);
+            diode.x = diode.y = 20;
+
+            var tmr: Timer = new Timer(1000);
+            tmr.addEventListener(TimerEvent.TIMER, timerHandler);
+            tmr.start();
+
+        }
+
+        private function timerHandler(event: TimerEvent): void
+        {
+            diode.blink();
         }
 
         private function addButton(button: BasicButton): void
@@ -190,6 +206,10 @@ package
                     handleMatchGame(event.packet);
                     break;
 
+                case ClientOpcodes.S_MSG_SEND_DATA_TO_CLIENT:
+                    trace("_MO_", this, 'packet recieved S_MSG_SEND_DATA_TO_CLIENT - NOT HANDLED YET');
+                    break;
+
                 case ClientOpcodes.S_MSG_PING:
                     trace("_MO_", this, 'packet recieved S_MSG_PING');
                     handlePingPong(event.packet);
@@ -206,7 +226,7 @@ package
          */
         private function handleLogonPlayer(packet: PacketBasic): void
         {
-            trace("_MO_", this, 'login sucesfull');
+            trace("_MO_", this, 'login successfull');
         }
 
         /**
