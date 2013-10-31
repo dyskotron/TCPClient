@@ -45,7 +45,6 @@ package
 
             tcpManager = new TCPCommManager();
             tcpManager.addEventListener(TCPCommEvent.PACKET_RECIEVED, packetLS_RecievedHandler);
-            tcpManager.connectWithIPAddress(LOGIN_SERVER_IP, LOGIN_SERVER_PORT);
 
             /*
              var uint32_1: uint = 0x01234567;
@@ -94,8 +93,12 @@ package
 
         private function login_clickHandler(event: MouseEvent): void
         {
+            tcpManager.serverType = TCPCommManager.SERVER_TYPE_LOGIN;
+            tcpManager.connectWithIPAddress(LOGIN_SERVER_IP, LOGIN_SERVER_PORT);
             tcpManager.packetSend(new PacketLS_GetVersion());
-            tcpManager.packetSend(new PacketLS_GetServerList(GameServerTypes.E_TIC_TAC_TOE));
+            var serverListPacket: PacketLS_GetServerList = new PacketLS_GetServerList();
+            serverListPacket.serverType = GameServerTypes.E_TIC_TAC_TOE;
+            tcpManager.packetSend(serverListPacket);
         }
 
         private function startMatch_clickHandler(event: MouseEvent): void

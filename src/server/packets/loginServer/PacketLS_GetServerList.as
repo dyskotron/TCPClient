@@ -11,7 +11,7 @@ package server.packets.loginServer
     public class PacketLS_GetServerList extends PacketBasic
     {
         //uint32
-        private var serverType: uint;
+        private var _serverType: uint;
         //uint32
         private var _serverIP: uint;
         //uint32
@@ -21,11 +21,9 @@ package server.packets.loginServer
          *
          * @param serverType
          */
-        public function PacketLS_GetServerList(serverType: uint)
+        public function PacketLS_GetServerList()
         {
             super(AuthPacketOpcodes.C_MSG_AUTH_SERVER_LIST);
-
-            this.serverType = serverType;
         }
 
         /**
@@ -44,6 +42,12 @@ package server.packets.loginServer
             return _serverPort;
         }
 
+
+        public function set serverType(value: uint): void
+        {
+            _serverType = value;
+        }
+
         /**
          *
          */
@@ -54,7 +58,6 @@ package server.packets.loginServer
             _serverIP = buffer.readUnsignedInt();
             _serverPort = buffer.readUnsignedInt();
         }
-
         /**
          *
          * @param crypt
@@ -64,7 +67,7 @@ package server.packets.loginServer
         {
             var internalBuffer: ByteArray = new ByteArray();
             internalBuffer.endian = Endian.LITTLE_ENDIAN;
-            internalBuffer.writeUnsignedInt(serverType);
+            internalBuffer.writeUnsignedInt(_serverType);
 
             serializeHeader(crypt, internalBuffer.length, crc.computeCRC32(internalBuffer));
 

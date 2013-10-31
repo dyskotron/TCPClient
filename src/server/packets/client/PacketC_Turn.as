@@ -46,7 +46,7 @@ package server.packets.client
 
         override public function serialize(crypt: Crypt, crc: CRC32): void
         {
-            var internalBuffer:ByteArray;
+            var internalBuffer: ByteArray = new ByteArray();
             internalBuffer.writeByte(_posX);
             internalBuffer.writeByte(_posY);
 

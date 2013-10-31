@@ -10,7 +10,6 @@ package server
     import flash.utils.Endian;
 
     import server.auth.Crypt;
-    import server.packets.GameServerTypes;
     import server.packets.PacketBasic;
     import server.packets.client.PacketC_Turn;
     import server.packets.client.PacketC_TurnStart;
@@ -55,8 +54,6 @@ package server
             socketBA.endian = Endian.LITTLE_ENDIAN;
 
             packetQueue = new Vector.<PacketBasic>();
-
-            _serverType = SERVER_TYPE_LOGIN;
         }
 
         public function connectWithIPAddress(ip: uint, port: uint): void
@@ -104,7 +101,7 @@ package server
             socket.addEventListener(IOErrorEvent.IO_ERROR, ioErrorHandler);
             socket.addEventListener(SecurityErrorEvent.SECURITY_ERROR, securityErrorHandler);
 
-            trace("_MO_", this, 'CONNECTING TO ' + host + ':' + port);
+            trace("_MO_", this, 'CONNECTING TO: ', host + ':' + port);
             socket.connect(host, port);
         }
 
@@ -115,7 +112,7 @@ package server
          */
         private function connectHandler(event: Event): void
         {
-            trace("_MO_", this, 'CONNECTED');
+            trace("_MO_", this, 'CONNECTED TO:  ', socket.remoteAddress + ':' + socket.remotePort);
 
             crypt.reset();
 
@@ -265,7 +262,7 @@ package server
                 case AuthPacketOpcodes.S_MSG_AUTH_RECHALLENGE:
                     break;
                 case AuthPacketOpcodes.S_MSG_AUTH_SERVER_LIST:
-                    packet = new PacketLS_GetServerList(GameServerTypes.E_TIC_TAC_TOE);
+                    packet = new PacketLS_GetServerList();
                     break;
                 case AuthPacketOpcodes.S_MSG_AUTH_GET_SERVER_STATS:
                     break;
