@@ -105,8 +105,9 @@ package
 
         private function sendMsg_clickHandler(event: MouseEvent): void
         {
-            var clientPacket: PacketClientData = new PacketClientData();
-            clientPacket.dataType = 10;
+            var clientPacket: PacketC_Turn = new PacketC_Turn();
+            clientPacket.posX = 10;
+            clientPacket.posY = 20;
             tcpManager.packetSend(clientPacket);
         }
 
