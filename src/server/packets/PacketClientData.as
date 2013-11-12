@@ -1,5 +1,6 @@
 package server.packets
 {
+    import server.CRC32;
     import server.auth.Crypt;
     import server.packets.opcodes.ClientOpcodes;
 
@@ -42,6 +43,13 @@ package server.packets
             super.serializeHeader(crypt, dataSize, crc32);
 
             _buffer.writeByte(_dataType);
+        }
+
+        override public function serialize(crypt: Crypt, crc: CRC32): void
+        {
+            super.serialize(crypt, crc);
+            _buffer.position = 0;
+            trace("_MO_", this, 'SERIALIZE - _buffer.length', _buffer.length);
         }
     }
 }

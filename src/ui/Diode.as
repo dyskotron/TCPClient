@@ -22,7 +22,7 @@ package ui
             alpha = 0;
         }
 
-        public function blink()
+        public function blink(): void
         {
 
             lightIntensity = 1;

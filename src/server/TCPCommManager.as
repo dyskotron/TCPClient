@@ -45,6 +45,9 @@ package server
         private var _serverType: uint;
         private var clientDataType: uint;
 
+        private var _host: String;
+        private var _port: uint;
+
         public function TCPCommManager()
         {
             crc32 = new CRC32();
@@ -61,6 +64,27 @@ package server
             connectWithHost(getStringIpFromUint(ip), port);
         }
 
+        /**
+         *
+         * @param host
+         * @param port
+         */
+        public function connectWithHost(host: String, port: uint): void
+        {
+            _host = host;
+            _port = port;
+
+            socket = new Socket();
+            socket.addEventListener(Event.CONNECT, connectHandler);
+            socket.addEventListener(Event.CLOSE, closeHandler);
+            socket.addEventListener(ProgressEvent.SOCKET_DATA, socketDataHandler);
+            socket.addEventListener(IOErrorEvent.IO_ERROR, ioErrorHandler);
+            socket.addEventListener(SecurityErrorEvent.SECURITY_ERROR, securityErrorHandler);
+
+            trace("_MO_", this, 'CONNECTING TO: ', host + ':' + port);
+            socket.connect(host, port);
+        }
+
         public function disconnect(): void
         {
             //disconnect from server
@@ -73,36 +97,24 @@ package server
         public function packetSend(packet: PacketBasic): void
         {
             trace("_MO_", this, 'SEND PACKET', packet.type);
-            if (!socket.connected)
+            if (!socket || !socket.connected)
                 packetQueue.push(packet);
             else
             {
                 packet.serialize(crypt, crc32);
+                trace("_MO_", this, 'send packet - lng:', packet.buffer.length, 'type:', packet.type);
                 socket.writeBytes(packet.buffer);
             }
+        }
+
+        public function get serverType(): uint
+        {
+            return _serverType;
         }
 
         public function set serverType(serverType: uint): void
         {
             _serverType = serverType;
-        }
-
-        /**
-         *
-         * @param host
-         * @param port
-         */
-        private function connectWithHost(host: String, port: uint): void
-        {
-            socket = new Socket();
-            socket.addEventListener(Event.CONNECT, connectHandler);
-            socket.addEventListener(Event.CLOSE, closeHandler);
-            socket.addEventListener(ProgressEvent.SOCKET_DATA, socketDataHandler);
-            socket.addEventListener(IOErrorEvent.IO_ERROR, ioErrorHandler);
-            socket.addEventListener(SecurityErrorEvent.SECURITY_ERROR, securityErrorHandler);
-
-            trace("_MO_", this, 'CONNECTING TO: ', host + ':' + port);
-            socket.connect(host, port);
         }
 
 
@@ -112,7 +124,7 @@ package server
          */
         private function connectHandler(event: Event): void
         {
-            trace("_MO_", this, 'CONNECTED TO:  ', socket.remoteAddress + ':' + socket.remotePort);
+            trace("_MO_", this, '===================================> CONNECTED TO:  ', _host + ':' + _port);
 
             crypt.reset();
 
@@ -170,7 +182,7 @@ package server
          */
         private function socketDataHandler(event: ProgressEvent): void
         {
-            //trace("_MO_", this, '=======> INCOMING SOCKET DATA - length', socket.bytesAvailable);
+            trace("_MO_", this, '=======> INCOMING SOCKET DATA - length', socket.bytesAvailable);
 
             if (state == STATE_AWAITING_HEADER)
             {
@@ -188,12 +200,15 @@ package server
 
                 /**only for debug*/
                 var crc: uint = socketBA.readUnsignedInt();
-                trace("_MO_", this, 'INCOMING PACKET TYPE:', incomingPacketType, 'DATA SIZE:', incomingDataSize, 'CRC:', crc.toString(16));
+                trace("_MO_", this, 'INCOMING PACKET TYPE:', incomingPacketType, 'DATA SIZE:', incomingDataSize, 'CRC:', crc.toString(16), 'socketBA.bytesAvailable', socketBA.bytesAvailable);
                 /**/
+
 
                 //clent packet data have own header - data is actually 1 byte longer then what is in header
                 if (_serverType == SERVER_TYPE_GAME && incomingPacketType == ClientOpcodes.S_MSG_SEND_DATA_TO_CLIENT)
                     incomingDataSize++;
+
+                trace("_MO_", this, 'incomingDataSize', incomingDataSize);
 
                 state = STATE_AWAITING_DATA;
             }
@@ -232,7 +247,10 @@ package server
             var packet: PacketBasic;
 
             if (_serverType == SERVER_TYPE_GAME && packetType == ClientOpcodes.C_MSG_SEND_DATA_TO_CLIENT)
+            {
+                trace("_MO_", this, 'CLIENT DATA !!!', clientDataType);
                 packet = createPacketC(clientDataType);
+            }
             else if (_serverType == SERVER_TYPE_GAME)
                 packet = createPacketGS(packetType);
             else if (_serverType == SERVER_TYPE_LOGIN)

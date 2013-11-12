@@ -52,7 +52,10 @@ package server.packets.client
 
             serializeHeader(crypt, internalBuffer.length, crc.computeCRC32(internalBuffer));
 
+            _buffer.writeBytes(internalBuffer);
 
+            //_buffer.position = 0;
+            trace("_MO_", this, 'SERIALIZE - _buffer.length', _buffer.length);
         }
     }
 }

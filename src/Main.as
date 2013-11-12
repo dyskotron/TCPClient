@@ -3,6 +3,9 @@ package
 
     import flash.display.Sprite;
     import flash.events.MouseEvent;
+    import flash.utils.getQualifiedClassName;
+
+    import flashx.textLayout.formats.TextAlign;
 
     import server.TCPCommEvent;
     import server.TCPCommManager;
@@ -23,10 +26,12 @@ package
 
     import ui.BasicButton;
     import ui.Diode;
+    import ui.LoggerView;
 
     public class Main extends Sprite
     {
-        private static const LOGIN_SERVER_IP: uint = 3919800155;
+        //private static const LOGIN_SERVER_IP: uint = 3919800155;
+        private static const LOGIN_SERVER_IP: String = '91.103.163.242';
         private static const LOGIN_SERVER_PORT: uint = 9339;
 
         private static const PLAYER_ID: uint = 625568080;
@@ -34,17 +39,20 @@ package
         private var tcpManager: TCPCommManager;
         private var lastButtonY: int = 30;
         private var diode: Diode;
+        private var incomingPacketLog: LoggerView;
+        private var outgoingPacketLog: LoggerView;
 
 
         public function Main()
         {
-            trace("_MO_", this, 'START');
+            var u: Number = 0xFFFFFFFFFFFFFFFF;
+            trace("_MO_", this, 'START', 0xFFFFFFFFFFFFFFFF, u);
 
             initUI();
 
 
             tcpManager = new TCPCommManager();
-            tcpManager.addEventListener(TCPCommEvent.PACKET_RECIEVED, packetLS_RecievedHandler);
+            tcpManager.addEventListener(TCPCommEvent.PACKET_RECIEVED, packetRecievedHandler);
 
             /*
              var uint32_1: uint = 0x01234567;
@@ -64,54 +72,20 @@ package
              */
         }
 
-        private function initUI(): void
+        private function packetRecievedHandler(event: TCPCommEvent): void
         {
-            var loginButton: BasicButton = new BasicButton('LOGIN');
-            loginButton.addEventListener(MouseEvent.CLICK, login_clickHandler);
-            addButton(loginButton);
+            if (tcpManager.serverType == TCPCommManager.SERVER_TYPE_GAME)
+                packetGS_RecievedHandler(event);
+            else if (tcpManager.serverType == TCPCommManager.SERVER_TYPE_LOGIN)
+                packetLS_RecievedHandler(event);
 
-            var startMatchButton: BasicButton = new BasicButton('START MATCH');
-            startMatchButton.addEventListener(MouseEvent.CLICK, startMatch_clickHandler);
-            addButton(startMatchButton);
-
-            var sendMsgButton: BasicButton = new BasicButton('SEND MSG');
-            sendMsgButton.addEventListener(MouseEvent.CLICK, sendMsg_clickHandler);
-            addButton(sendMsgButton);
-
-            diode = new Diode();
-            addChild(diode);
-            diode.x = diode.y = 15;
-        }
-
-        private function addButton(button: BasicButton): void
-        {
-            addChild(button);
-            button.x = (stage.stageWidth - button.width) / 2;
-            button.y = lastButtonY;
-            lastButtonY += 50;
-        }
-
-        private function login_clickHandler(event: MouseEvent): void
-        {
-            tcpManager.serverType = TCPCommManager.SERVER_TYPE_LOGIN;
-            tcpManager.connectWithIPAddress(LOGIN_SERVER_IP, LOGIN_SERVER_PORT);
-            tcpManager.packetSend(new PacketLS_GetVersion());
-            var serverListPacket: PacketLS_GetServerList = new PacketLS_GetServerList();
-            serverListPacket.serverType = GameServerTypes.E_TIC_TAC_TOE;
-            tcpManager.packetSend(serverListPacket);
-        }
-
-        private function startMatch_clickHandler(event: MouseEvent): void
-        {
-            tcpManager.packetSend(new PacketGS_MatchGame());
-        }
-
-        private function sendMsg_clickHandler(event: MouseEvent): void
-        {
-            var clientPacket: PacketC_Turn = new PacketC_Turn();
-            clientPacket.posX = 10;
-            clientPacket.posY = 20;
-            tcpManager.packetSend(clientPacket);
+            if (event.packet)
+            {
+                var packetName: String = getQualifiedClassName(event.packet);
+                var pos: int = packetName.search("::") + 2;
+                packetName = packetName.substr(pos);
+                incomingPacketLog.log(packetName);
+            }
         }
 
         //========================================= LOGIN SERVER ===================================================//
@@ -143,6 +117,7 @@ package
                     break;
 
                 default:
+                    incomingPacketLog.log('UNKNOWN LOGIN PACKET type:' + event.packetType);
                     trace("_MO_", this, 'UNKNOWN LOGIN PACKET type:', event.packetType);
             }
         }
@@ -156,8 +131,6 @@ package
             trace("_MO_", this, 'get server list - serverIP:', packetServerList.serverIP, 'serverPort:', packetServerList.serverPort);
 
             tcpManager.disconnect();
-            tcpManager.removeEventListener(TCPCommEvent.PACKET_RECIEVED, packetLS_RecievedHandler);
-            tcpManager.addEventListener(TCPCommEvent.PACKET_RECIEVED, packetGS_RecievedHandler);
             tcpManager.serverType = TCPCommManager.SERVER_TYPE_GAME;
 
             tcpManager.connectWithIPAddress(packetServerList.serverIP, packetServerList.serverPort);
@@ -166,6 +139,7 @@ package
             //TODO:get player ID
             loginPacket.playerID = int(Math.random() * 156489);//PLAYER_ID;
             tcpManager.packetSend(loginPacket);
+            outgoingPacketLog.log('PacketGS_PlayerLogin');
         }
 
         /**
@@ -199,7 +173,7 @@ package
                     break;
 
                 case ClientOpcodes.S_MSG_SEND_DATA_TO_CLIENT:
-                    trace("_MO_", this, 'packet recieved S_MSG_SEND_DATA_TO_CLIENT - NOT HANDLED YET');
+                    trace("_MO_", this, 'packet recieved S_MSG_SEND_DATA_TO_CLIENT');
                     handleClientPacket(PacketClientData(event.packet));
                     break;
 
@@ -209,8 +183,10 @@ package
                     break;
 
                 default:
+                    incomingPacketLog.log('UNKNOWN GAME PACKET type:' + event.packetType);
                     trace("_MO_", this, 'UNKNOWN GAME PACKET type:', event.packetType);
             }
+
         }
 
         /**
@@ -241,6 +217,7 @@ package
         {
             //trace("_MO_", this, 'ping pong - timestamp:', pingPacket.timestamp);
             tcpManager.packetSend(new PacketGS_PingPong());
+            outgoingPacketLog.log('PacketGS_PingPong');
             diode.blink();
         }
 
@@ -252,6 +229,12 @@ package
          */
         private function handleClientPacket(packet: PacketClientData): void
         {
+            if (!packet)
+            {
+                trace("_MO_", this, 'CLIENT PACKET NULL');
+                return;
+            }
+
             switch (packet.dataType)
             {
                 case ClientDataOpcodes.C_MSG_CLIENT_DATA_TURN_START:
@@ -289,6 +272,94 @@ package
         {
             trace("_MO_", this, 'get packetCTurn - posX:', packetCTurn.posX, 'posY:', packetCTurn.posY);
         }
+
+        //======================================== USER INTERFACE ==================================================//
+
+        private function initUI(): void
+        {
+            var loginButton: BasicButton = new BasicButton('LOGIN');
+            loginButton.addEventListener(MouseEvent.CLICK, login_clickHandler);
+            addButton(loginButton);
+
+            var startMatchButton: BasicButton = new BasicButton('START MATCH');
+            startMatchButton.addEventListener(MouseEvent.CLICK, startMatch_clickHandler);
+            addButton(startMatchButton);
+
+            var sendTurnStartButton: BasicButton = new BasicButton('SEND TURN START');
+            sendTurnStartButton.addEventListener(MouseEvent.CLICK, turnStart_clickHandler);
+            addButton(sendTurnStartButton);
+
+            var sendTurnTOButton: BasicButton = new BasicButton('SEND TURN TIMEOUT');
+            sendTurnTOButton.addEventListener(MouseEvent.CLICK, turnTO_clickHandler);
+            addButton(sendTurnTOButton);
+
+            var sendTurnButton: BasicButton = new BasicButton('SEND TURN');
+            sendTurnButton.addEventListener(MouseEvent.CLICK, turn_clickHandler);
+            addButton(sendTurnButton);
+
+            diode = new Diode();
+            addChild(diode);
+            diode.x = stage.stageWidth / 2;
+            diode.y = 15;
+
+            outgoingPacketLog = new LoggerView(300, stage.stageHeight);
+            addChild(outgoingPacketLog);
+
+            incomingPacketLog = new LoggerView(300, stage.stageHeight);
+            incomingPacketLog.x = stage.stageWidth - incomingPacketLog.width;
+            incomingPacketLog.align = TextAlign.RIGHT;
+            addChild(incomingPacketLog);
+        }
+
+        private function addButton(button: BasicButton): void
+        {
+            addChild(button);
+            button.x = (stage.stageWidth - button.width) / 2;
+            button.y = lastButtonY;
+            lastButtonY += 50;
+        }
+
+        private function login_clickHandler(event: MouseEvent): void
+        {
+            tcpManager.serverType = TCPCommManager.SERVER_TYPE_LOGIN;
+            tcpManager.connectWithHost(LOGIN_SERVER_IP, LOGIN_SERVER_PORT);
+            tcpManager.packetSend(new PacketLS_GetVersion());
+            outgoingPacketLog.log('PacketLS_GetVersion');
+            var serverListPacket: PacketLS_GetServerList = new PacketLS_GetServerList();
+            serverListPacket.serverType = GameServerTypes.E_TIC_TAC_TOE;
+            tcpManager.packetSend(serverListPacket);
+            outgoingPacketLog.log('PacketLS_GetServerList');
+        }
+
+        private function startMatch_clickHandler(event: MouseEvent): void
+        {
+            tcpManager.packetSend(new PacketGS_MatchGame());
+            outgoingPacketLog.log('PacketGS_MatchGame');
+        }
+
+        private function turnStart_clickHandler(event: MouseEvent): void
+        {
+            var clientPacket: PacketC_TurnStart = new PacketC_TurnStart();
+            tcpManager.packetSend(clientPacket);
+            outgoingPacketLog.log('PacketC_TurnStart');
+        }
+
+        private function turnTO_clickHandler(event: MouseEvent): void
+        {
+            var clientPacket: PacketC_TurnTimeOut = new PacketC_TurnTimeOut();
+            tcpManager.packetSend(clientPacket);
+            outgoingPacketLog.log('PacketC_TurnTimeOut');
+        }
+
+        private function turn_clickHandler(event: MouseEvent): void
+        {
+            var clientPacket: PacketC_Turn = new PacketC_Turn();
+            clientPacket.posX = 10;
+            clientPacket.posY = 20;
+            tcpManager.packetSend(clientPacket);
+            outgoingPacketLog.log('PacketC_Turn');
+        }
+
 
     }
 }
